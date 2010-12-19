@@ -1,4 +1,10 @@
-package com.swfdiy
+/*
+ *  from www.swfdiy.com
+ *  the Deserializer and Serializer copy many code snippets from phpAFM.
+ *  thanks to phpAMF
+ *  
+*/
+package com.swfdiy.io
 {
 	import flash.utils.ByteArray;
 
@@ -7,9 +13,10 @@ package com.swfdiy
 		private var _raw:ByteArray;
 		private var _version:uint;
 		private var _headerCount:uint;
-		private var _messageCount:uint;
+		private var _bodyCount:uint;
 		
-		private var _messageList:Array ;
+		private var _bodyList:Array ;
+		private var _headerList:Array;
 		
 		private var storedStrings:Array ;
 		private var storedObjects:Array ;
@@ -24,24 +31,30 @@ package com.swfdiy
 			_parse();
 		}
 		
+		public function get version():uint {
+			return _version;
+		}
+		
 		private function _parse():void {
 			_version = _raw.readShort();
 			_headerCount = _raw.readShort();
 		
 			var i:int;
+			
+			_headerList =[];
 			for (i=0;i<_headerCount;i++) {
 				_readHeader();
 			}
 		
-			_messageList = [];
+			_bodyList = [];
 			storedStrings = [];
 			storedDefinitions = [];
 			storedObjects = [];
 			amf0storedObjects = [];
 			
-			_messageCount = _raw.readShort();
-			for (i=0;i<_messageCount;i++) {
-				_readMessage();
+			_bodyCount = _raw.readShort();
+			for (i=0;i<_bodyCount;i++) {
+				_readBody();
 			}
 		}
 		
@@ -56,7 +69,7 @@ package com.swfdiy
 			
 			
 			var type:uint = _raw.readUnsignedByte();	
-			_readData(type);
+			_headerList.push({value:_readData(type), type:type, name:name, understand:understand, headerLen:headerLen});
 			
 		}
 		private function _readData(type:uint):* {
@@ -181,20 +194,22 @@ package com.swfdiy
 			return data;
 		}
 		
-		private function _readMessage():void {
+		private function _readBody():void {
 			var target:String = _raw.readUTF();
 			var responder:String = _raw.readUTF();
-			var messageLen:uint = _raw.readInt();
+			var bodyLen:uint = _raw.readInt();
 						
 			var type:uint = _raw.readUnsignedByte();	
 			var data:* = _readData(type);
-			_messageList.push({target : target, responder: responder, data:data });
+			_bodyList.push({ responseURI: target, responseTarget: responder, value:data });
 		}
 		
-		public function get messageList():Array {
-			return _messageList;
+		public function get bodyList():Array {
+			return _bodyList;
 		}
-		
+		public function get headerList():Array {
+			return _headerList;
+		}
 		
 		/********************************************************************************
 		 *                       This is the AMF3 specific stuff
