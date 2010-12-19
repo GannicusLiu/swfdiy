@@ -2,10 +2,10 @@ package com.swfdiy
 {
 	import flash.utils.ByteArray;
 
-	public class AMF
+	public class AMFDeserializer
 	{
 		private var _raw:ByteArray;
-		private var _version:int;
+		private var _version:uint;
 		private var _headerCount:uint;
 		private var _messageCount:uint;
 		
@@ -17,7 +17,7 @@ package com.swfdiy
 		private var amf0storedObjects:Array ;
 		
 		
-		public function AMF(raw:ByteArray)
+		public function AMFDeserializer(raw:ByteArray)
 		{
 			_raw = raw;
 			
@@ -48,26 +48,29 @@ package com.swfdiy
 		//I am NOT sure the _readHeader is correct or not, no enough AMF data for testing
 		private function _readHeader():void {
 			var name:String = _raw.readUTF();
-			var understand:uint = _raw.readByte();
+			var understand:uint = _raw.readUnsignedByte();
 			var headerLen:uint = _raw.readInt();
 		
 			//var headerData:ByteArray = new ByteArray;
-			//_raw.readBytes(headerData, 0 , headerLen);
+			//_raw.readUnsignedBytes(headerData, 0 , headerLen);
 			
 			
-			var type:int = _raw.readByte();	
+			var type:uint = _raw.readUnsignedByte();	
 			_readData(type);
 			
 		}
-		private function _readData(type:int):* {
+		private function _readData(type:uint):* {
 			var i:int;
 			var data:*;
+			var val:*;
+			var key:*;
+			var t:uint;
 			switch (type) {
 				case 0: // number
 					data =_raw.readDouble();
 					break;
 				case 1: // boolean
-					data =_raw.readByte() == 1;
+					data =_raw.readUnsignedByte() == 1;
 					break;
 				case 2: // string
 					data =_raw.readUTF();
@@ -83,15 +86,14 @@ package com.swfdiy
 					data = null;
 					break;
 				case 7: // Circular references are returned here
-					var refIndex:int = _raw.readShort();
+					var refIndex:uint = _raw.readShort();
 					data = amf0storedObjects[refIndex];
 					break;
 				case 8: // mixed array with numeric and string keys
-					var key:String = _raw.readUTF();
-					var t:int;
+					key = _raw.readUTF();
 					data = new Object();
-					for (t = _raw.readByte();t!=9;t=_raw.readByte()) {
-						var val:* = _readData(t);
+					for (t = _raw.readUnsignedByte();t!=9;t=_raw.readUnsignedByte()) {
+						val = _readData(t);
 						if (!isNaN(Number(key)) ) {
 							data[Number(key)] = val;
 						} else {
@@ -104,9 +106,9 @@ package com.swfdiy
 					break;
 				case 10: // array
 					data = [];
-					var arrayCount:int = _raw.readInt();
+					var arrayCount:uint = _raw.readInt();
 					for (i=0;i<arrayCount;i++) {
-						var _t:int = _raw.readByte();
+						var _t:uint = _raw.readUnsignedByte();
 						var tmpData:* = _readData(_t);
 						data.push(tmpData);
 					} 
@@ -114,7 +116,7 @@ package com.swfdiy
 					break;
 				case 11: // date
 					var ms:Number = _raw.readDouble();
-					var tz:int = _raw.readShort();
+					var tz:uint = _raw.readShort();
 					if (tz > 720) {
 						tz = -(65535 - tz)
 					}
@@ -124,7 +126,7 @@ package com.swfdiy
 					data = ms;
 					break;
 				case 12: // string, strlen(string) > 2^16
-					var strLen:int = _raw.readInt();
+					var strLen:uint = _raw.readInt();
 					data = _raw.readUTFBytes(strLen);
 					break;
 				case 13: // mainly internal AS objects
@@ -146,10 +148,10 @@ package com.swfdiy
 						isObject = false;
 					}
 					amf0storedObjects.push(obj);
-					var key:String = _raw.readUTF(); // grab the key
-					var val:*;
-					var t:int;
-					for (t = _raw.readByte();t!=9;t=_raw.readByte()) {
+					key = _raw.readUTF(); // grab the key
+					
+					
+					for (t = _raw.readUnsignedByte();t!=9;t=_raw.readUnsignedByte()) {
 						val = _readData(t); // grab the value
 						if(isObject)
 						{
@@ -184,7 +186,7 @@ package com.swfdiy
 			var responder:String = _raw.readUTF();
 			var messageLen:uint = _raw.readInt();
 						
-			var type:int = _raw.readByte();	
+			var type:uint = _raw.readUnsignedByte();	
 			var data:* = _readData(type);
 			_messageList.push({target : target, responder: responder, data:data });
 		}
@@ -198,7 +200,7 @@ package com.swfdiy
 		 *                       This is the AMF3 specific stuff
 		 ********************************************************************************/
 		private function _readAmf3Data():*	{
-			var type:int = _raw.readByte();
+			var type:uint = _raw.readUnsignedByte();
 			switch(type)
 			{
 				case 0x00 : return null; //undefined
@@ -227,15 +229,15 @@ package com.swfdiy
 		/// of each byte as a continuation flag.
 		/// </summary>
 		/// <returns></returns>
-		private function _readAmf3Int():int
+		private function _readAmf3Int():uint
 		{
-			var interger:int = _raw.readByte();
+			var interger:uint = _raw.readUnsignedByte();
 			if(interger < 128)
 				return interger;
 			else
 			{
 				interger = (interger & 0x7f) << 7;
-				var tmp:int = _raw.readByte();
+				var tmp:uint = _raw.readUnsignedByte();
 				if(tmp < 128)
 				{
 					return interger | tmp;
@@ -243,7 +245,7 @@ package com.swfdiy
 				else
 				{
 					interger = (interger | (tmp & 0x7f)) << 7;
-					tmp = _raw.readByte();
+					tmp = _raw.readUnsignedByte();
 					if(tmp < 128)
 					{
 						return interger | tmp;
@@ -251,7 +253,7 @@ package com.swfdiy
 					else
 					{
 						interger = (interger | (tmp & 0x7f)) << 8;
-						tmp = _raw.readByte();
+						tmp = _raw.readUnsignedByte();
 						interger |= tmp;
 						
 						// Check if the integer should be negative
@@ -267,7 +269,7 @@ package com.swfdiy
 		
 		private function _readAmf3Date():* 
 		{
-			var dateref:int = _readAmf3Int();
+			var dateref:uint = _readAmf3Int();
 			if ((dateref & 0x01) == 0) {
 				dateref = dateref >> 1;
 				if (dateref>= storedObjects.length) {
@@ -289,7 +291,7 @@ package com.swfdiy
 		 */
 		private function _readAmf3String():String {
 			
-			var strref:int = _readAmf3Int();
+			var strref:uint = _readAmf3Int();
 			
 			if ((strref & 0x01) == 0) {
 				strref = strref >> 1;
@@ -299,7 +301,7 @@ package com.swfdiy
 				}
 				return storedStrings[strref];
 			} else {
-				var strlen:int = strref >> 1; 
+				var strlen:uint = strref >> 1; 
 				var str:String = "";
 				if (strlen > 0) 
 				{
@@ -313,7 +315,7 @@ package com.swfdiy
 		
 		private function _readAmf3XmlString():String
 		{
-			var handle:int = _readAmf3Int();
+			var handle:uint = _readAmf3Int();
 			var inline:Boolean = ((handle & 1) != 0 ); 
 			handle = handle >> 1;
 			var xml:String;
@@ -331,7 +333,7 @@ package com.swfdiy
 		
 		private function _readAmf3ByteArray():ByteArray
 		{
-			var handle:int = _readAmf3Int();
+			var handle:uint = _readAmf3Int();
 			var inline:Boolean = ((handle & 1) != 0 ); 
 			handle = handle >> 1;
 			var ba :ByteArray;
@@ -350,7 +352,7 @@ package com.swfdiy
 		
 		private function _readAmf3Array():Object
 		{
-			var handle:int = _readAmf3Int();
+			var handle:uint = _readAmf3Int();
 			var inline:Boolean = ((handle & 1) != 0 ); 
 			handle = handle >> 1;
 			if( inline )
@@ -381,21 +383,28 @@ package com.swfdiy
 		
 		private function _readAmf3Object():Object
 		{
-			var handle:int = _readAmf3Int();
+			var handle:uint = _readAmf3Int();
+			//trace("handle=" + handle);
 			var inline:Boolean = ((handle & 1) != 0 ); 
+			handle = handle >> 1;
 			var classDefinition:Object;
 			if( inline )
-			{
+			{	
 				//an inline object
 				var inlineClassDef:Boolean = ((handle & 1) != 0 );handle = handle >> 1;
 				if( inlineClassDef )
 				{
 					//inline class-def
 					var typeIdentifier:String  = _readAmf3String();
+					//trace("typeIdentifier=" + typeIdentifier);
 					var typedObject:Boolean = !(typeIdentifier == null) && typeIdentifier != "";
+					//trace("typedObject=" + typedObject);
 					//flags that identify the way the object is serialized/deserialized
+					//trace("now handle=" + handle);
 					var externalizable:Boolean = ((handle & 1) != 0 );
+					
 					handle = handle >> 1;
+					//trace("externalizable=" + externalizable);
 					var dynamic :Boolean= ((handle & 1) != 0 );handle = handle >> 1;
 					var classMemberCount:int = handle;
 					
