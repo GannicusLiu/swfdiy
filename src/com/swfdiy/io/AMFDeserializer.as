@@ -7,7 +7,7 @@
 package com.swfdiy.io
 {
 	import flash.utils.ByteArray;
-
+	import flash.net.ObjectEncoding;
 	public class AMFDeserializer
 	{
 		private var _raw:ByteArray;
@@ -88,8 +88,11 @@ package com.swfdiy.io
 				case 2: // string
 					data =_raw.readUTF();
 					break;
-				case 3: // object Object
+				case 3: // AMF0 object Object
+					var oldEncoding:unit = _raw.objectEncoding;
+					_raw.position -=1;
 					data =_raw.readObject();
+					_raw.objectEncoding = oldEncoding;
 					amf0storedObjects.push(data);
 					break;
 				case 5: // null
