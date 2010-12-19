@@ -37,5 +37,10 @@ package com.swfdiy
 		public function get headerList():Array {
 			return _headerList;
 		}
+		
+		public function addBody(body:*):void {
+			
+			_bodyList.push(body);
+		}
 	}
 }
