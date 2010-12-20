@@ -15,13 +15,13 @@ package com.swfdiy.io
 		private var _headerCount:uint;
 		private var _bodyCount:uint;
 		
-		private var _bodyList:Array ;
-		private var _headerList:Array;
+		private var _bodyList:Array = [];
+		private var _headerList:Array = [];
 		
-		private var storedStrings:Array ;
-		private var storedObjects:Array ;
-		private var storedDefinitions:Array ;
-		private var amf0storedObjects:Array ;
+		private var storedStrings:Array =[] ;
+		private var storedObjects:Array =[] ;
+		private var storedDefinitions:Array =[] ;
+		private var amf0storedObjects:Array =[];
 		
 		
 		public function AMFDeserializer(raw:ByteArray)
