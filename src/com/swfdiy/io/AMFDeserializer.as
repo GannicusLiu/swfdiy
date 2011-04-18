@@ -91,6 +91,7 @@ package com.swfdiy.io
 				case 3: // AMF0 object Object
 					var oldEncoding:unit = _raw.objectEncoding;
 					_raw.position -=1;
+					_raw.objectEncoding = ObjectEncoding.AMF0;
 					data =_raw.readObject();
 					_raw.objectEncoding = oldEncoding;
 					amf0storedObjects.push(data);
@@ -201,7 +202,12 @@ package com.swfdiy.io
 			var target:String = _raw.readUTF();
 			var responder:String = _raw.readUTF();
 			var bodyLen:uint = _raw.readInt();
-						
+			if (bodyLen != -1 && bodyLen > 	_raw.bytesAvailable) {
+				//not long enough
+				trace("not long enough");
+				throw new Error("not long enough");
+				return;
+			}		
 			var type:uint = _raw.readUnsignedByte();	
 			var data:* = _readData(type);
 			_bodyList.push({ responseURI: target, responseTarget: responder, value:data });
